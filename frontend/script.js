@@ -73,6 +73,77 @@ const unlockButton =
 
 
 // ========================================
+// NOTIFICATIONS
+// ========================================
+
+// Prevent repeated notifications for the same event
+let lastNotifiedEvent = null;
+
+
+// Ask the browser for notification permission
+async function requestNotificationPermission() {
+
+    if (!("Notification" in window)) {
+
+        console.log(
+            "This browser does not support notifications."
+        );
+
+        return;
+    }
+
+    if (Notification.permission === "default") {
+
+        try {
+
+            await Notification.requestPermission();
+
+        } catch (error) {
+
+            console.error(
+                "Notification permission error:",
+                error
+            );
+        }
+    }
+}
+
+
+// Show tampering notification
+function showTamperNotification(event) {
+
+    if (!("Notification" in window)) {
+        return;
+    }
+
+    if (Notification.permission !== "granted") {
+        return;
+    }
+
+    const eventId =
+        `${event.time}-${event.type}-${event.message}`;
+
+    // Don't notify repeatedly for the same event
+    if (eventId === lastNotifiedEvent) {
+        return;
+    }
+
+    lastNotifiedEvent = eventId;
+
+
+    new Notification(
+        "🚨 Smart Locker Alert",
+        {
+            body:
+                event.message ||
+                "Tampering detected in the locker.",
+            icon: "/favicon.ico"
+        }
+    );
+}
+
+
+// ========================================
 // LOCK
 // ========================================
 
@@ -452,6 +523,20 @@ function updateActivity(events) {
     }
 
 
+    // Check newest events for tampering
+    const latestEvent = events[0];
+
+    if (
+        latestEvent &&
+        latestEvent.type === "TAMPER"
+    ) {
+
+        showTamperNotification(
+            latestEvent
+        );
+    }
+
+
     activityLog.innerHTML =
         events.map(event => {
 
@@ -500,6 +585,8 @@ function updateActivity(events) {
 // ========================================
 // START
 // ========================================
+
+requestNotificationPermission();
 
 updateDashboard();
 
