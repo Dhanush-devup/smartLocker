@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0,
+                   maximum-scale=1.0, user-scalable=no">
+
+    <title>Smart Locker</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- HEADER -->
+    <header class="header">
+
+        <div>
+            <h1>🔐 Smart Locker</h1>
+            <p>ESP32 Security System</p>
+        </div>
+
+        <div id="esp-status" class="connection offline">
+            ● OFFLINE
+        </div>
+
+    </header>
+
+
+    <!-- SECURITY -->
+    <section id="security-card" class="card security secure">
+
+        <div class="label">
+            SECURITY STATUS
+        </div>
+
+        <div id="security-icon" class="main-icon">
+            🛡️
+        </div>
+
+        <h2 id="security-status">
+            SECURE
+        </h2>
+
+        <p id="security-message">
+            Locker is secure and stable
+        </p>
+
+    </section>
+
+
+    <!-- LOCKER -->
+    <section class="card locker-card">
+
+        <div class="label">
+            LOCKER
+        </div>
+
+        <div id="lock-icon" class="main-icon">
+            🔒
+        </div>
+
+        <h2 id="lock-status">
+            LOCKED
+        </h2>
+
+        <p id="lock-message">
+            Locker is secured
+        </p>
+
+        <div class="buttons">
+
+            <button id="unlock-btn" class="unlock">
+                🔓 Unlock
+            </button>
+
+            <button id="lock-btn" class="lock">
+                🔒 Lock
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- MOVEMENT -->
+    <section id="movement-card" class="card">
+
+        <div class="label">
+            MOVEMENT
+        </div>
+
+        <div id="movement-icon" class="main-icon">
+            📡
+        </div>
+
+        <h2 id="movement-status">
+            LOW
+        </h2>
+
+        <p id="movement-message">
+            Locker is stable
+        </p>
+
+    </section>
+
+
+    <!-- ALARM -->
+    <section id="alarm-card" class="card">
+
+        <div class="label">
+            ALARM
+        </div>
+
+        <div id="alarm-icon" class="main-icon">
+            🔔
+        </div>
+
+        <h2 id="alarm-status">
+            OFF
+        </h2>
+
+        <p id="alarm-message">
+            No active alarm
+        </p>
+
+    </section>
+
+
+    <!-- SENSOR STATUS -->
+    <section class="card">
+
+        <div class="label">
+            SENSOR STATUS
+        </div>
+
+        <div class="sensor">
+
+            <div>
+                <span>ESP32</span>
+                <small>Controller</small>
+            </div>
+
+            <span id="sensor-esp32"
+                  class="badge offline-badge">
+                OFFLINE
+            </span>
+
+        </div>
+
+
+        <div class="sensor">
+
+            <div>
+                <span>ADXL345</span>
+                <small>Movement Sensor</small>
+            </div>
+
+            <span class="badge online-badge">
+                ACTIVE
+            </span>
+
+        </div>
+
+
+        <div class="sensor">
+
+            <div>
+                <span>Servo</span>
+                <small>Lock Mechanism</small>
+            </div>
+
+            <span class="badge online-badge">
+                ACTIVE
+            </span>
+
+        </div>
+
+
+        <div class="sensor">
+
+            <div>
+                <span>Buzzer</span>
+                <small>Alarm</small>
+            </div>
+
+            <span class="badge online-badge">
+                ACTIVE
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- ACTIVITY -->
+    <section class="card activity">
+
+        <div class="activity-header">
+
+            <div class="label">
+                ACTIVITY LOG
+            </div>
+
+            <span class="live">
+                ● LIVE
+            </span>
+
+        </div>
+
+        <div id="activity-log">
+
+            <div class="empty">
+                Waiting for activity...
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <footer>
+        Smart Locker • ESP32 IoT Security System
+    </footer>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
