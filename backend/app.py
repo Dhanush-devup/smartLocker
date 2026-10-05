@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request, send_from_directory
 from pathlib import Path
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 # --------------------------------------------------
 # PATHS
@@ -137,11 +139,19 @@ def event():
 
         # Add event to activity log
         event_type = data.get("event")
+        event_message = data.get("message")
 
         if event_type:
+
+            # Get current time in IST
+            current_time = datetime.now(
+                ZoneInfo("Asia/Kolkata")
+            ).strftime("%H:%M:%S")
+
             activity_log.insert(0, {
-                "event": event_type,
-                "time": time.strftime("%H:%M:%S")
+                "type": event_type,
+                "message": event_message or event_type,
+                "time": current_time
             })
 
             # Keep only recent events
