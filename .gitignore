@@ -6,3 +6,4 @@ __pycache__/
 esp32/smart_locker/secrets.h
 backend/local_secrets.json
 backend/users.json
+backend/login_history.txt

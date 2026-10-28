@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Smart Locker | Sign in</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">⌑</div>
+      <div><h1>Smart Locker</h1><p>Security management system</p></div>
+    </div>
+    <form id="login-form" class="card login-card">
+      <span class="eyebrow">VERIFIED ACCESS</span>
+      <h2>Sign in</h2>
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button id="login-btn" class="button button-dark" type="submit">Sign in</button>
+      <p id="login-feedback" class="feedback error" role="alert"></p>
+    </form>
+  </main>
+  <script>
+    const form = document.getElementById("login-form");
+    const feedback = document.getElementById("login-feedback");
+    const loginButton = document.getElementById("login-btn");
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      loginButton.disabled = true;
+      feedback.textContent = "";
+      try {
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: form.username.value, password: form.password.value })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.message || "Sign in failed");
+        window.location.href = "/";
+      } catch (error) {
+        feedback.textContent = error.message;
+        form.password.value = "";
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

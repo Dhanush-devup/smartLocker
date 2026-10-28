@@ -14,7 +14,10 @@
         <div class="brand-mark" aria-hidden="true">⌑</div>
         <div><h1>Smart Locker</h1><p>Security management system</p></div>
       </div>
-      <div id="esp-status" class="connection offline" aria-live="polite"><span class="status-dot"></span> Connecting…</div>
+      <div class="topbar-right">
+        <span id="user-chip" class="user-chip" hidden><span id="user-name"></span><span id="user-role" class="role"></span><button id="logout-btn" class="logout-button" type="button">Log out</button></span>
+        <div id="esp-status" class="connection offline" aria-live="polite"><span class="status-dot"></span> Connecting…</div>
+      </div>
     </header>
 
     <main>
@@ -33,7 +36,7 @@
           <h3 id="lock-status">UNKNOWN</h3><p id="lock-message">Waiting for controller status</p>
           <div class="card-actions"><button id="unlock-btn" class="button button-primary" type="button">Unlock locker</button><button id="lock-btn" class="button button-dark" type="button">Lock locker</button></div>
           
-<div id="clear-alarm-container" class="clear-alarm-container">
+<div id="clear-alarm-container" class="clear-alarm-container" hidden>
     <p class="clear-alarm-warning">A security incident is latched.</p>
   <button id="clear-alarm-btn" class="button button-danger" type="button">
     Clear Alarm
@@ -50,6 +53,10 @@
         <article id="movement-card" class="card overview-card">
           <div class="card-heading"><span class="card-icon amber">↗</span><span class="eyebrow">MOVEMENT</span></div>
           <h3 id="movement-status">UNKNOWN</h3><p id="movement-message">Waiting for sensor state</p>
+        </article>
+        <article id="contents-card" class="card overview-card contents-card">
+          <div class="card-heading"><span id="contents-icon" class="card-icon green">▣</span><span class="eyebrow">CONTENTS</span></div>
+          <h3 id="contents-status">UNKNOWN</h3><p id="contents-message">Waiting for IR sensor state</p>
         </article>
       </section>
 

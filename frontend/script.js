@@ -5,6 +5,8 @@ let previousLatestEventKey = null;
 let lastUpdatedAt = null;
 let liveStream = null;
 let statusRequestInFlight = false;
+let currentUser = null;
+let lastDashboardData = null;
 
 const el = id => document.getElementById(id);
 const securityCard = el("security-card");
@@ -21,6 +23,11 @@ const lockButton = el("lock-btn");
 const clearAlarmButton = el("clear-alarm-btn");
 const commandFeedback = el("command-feedback");
 const clearAlarmContainer = el("clear-alarm-container");
+const clearAlarmWarning = clearAlarmContainer.querySelector(".clear-alarm-warning");
+const userChip = el("user-chip");
+const userName = el("user-name");
+const userRole = el("user-role");
+const logoutButton = el("logout-btn");
 const alarmCard = el("alarm-card");
 const alarmStatus = el("alarm-status");
 const alarmMessage = el("alarm-message");
@@ -28,6 +35,10 @@ const alarmIncidentNote = el("alarm-incident-note");
 const movementCard = el("movement-card");
 const movementStatus = el("movement-status");
 const movementMessage = el("movement-message");
+const contentsCard = el("contents-card");
+const contentsIcon = el("contents-icon");
+const contentsStatus = el("contents-status");
+const contentsMessage = el("contents-message");
 const espStatus = el("esp-status");
 const sensorEsp32 = el("sensor-esp32");
 const sensorAdxl = el("sensor-adxl");
@@ -101,16 +112,17 @@ function updateAlarm(alarm, security) {
   alarmStatus.textContent = latched ? "INCIDENT LATCHED" : known ? "NO ACTIVE INCIDENT" : "UNKNOWN";
   alarmMessage.textContent = latched ? "Incident remains active until explicitly cleared" : known ? "No latched incident reported by controller" : "Waiting for incident status";
   alarmIncidentNote.textContent = "Buzzer output is not reported separately by the current firmware.";
-  if (clearAlarmButton) clearAlarmButton.hidden = !latched;
-  
-  if (clearAlarmContainer) {
-    const latched =
-      isAlarmOn(alarm) ||
-      normalizeSecurity(security, null, alarm, null) === "ALARM_LATCHED";
-
-    clearAlarmContainer.hidden = !latched;
+  const canClear = Boolean(currentUser?.can_clear_alarm);
+  clearAlarmContainer.hidden = !latched;
+  clearAlarmButton.hidden = !canClear;
+  clearAlarmWarning.textContent = canClear
+    ? "A security incident is latched."
+    : "A security incident is latched. An owner or admin must clear it.";
+  // Unlocking during an active alarm is owner-only; the backend enforces this too.
+  if (latched && !currentUser?.can_unlock_during_alarm) {
+    unlockButton.disabled = true;
+    lockMessage.textContent = "Unlock is restricted to the owner during an alarm";
   }
-
 }
 function updateMovement(movement) {
   const value = String(movement ?? "").toUpperCase();
@@ -118,6 +130,29 @@ function updateMovement(movement) {
   else if (value.includes("SUSPECT") || value.includes("WAITING")) { movementStatus.textContent = "SUSPECTED"; movementMessage.textContent = "Movement is awaiting confirmation"; movementCard.classList.remove("movement-danger"); }
   else if (value && !["UNKNOWN", "NULL"].includes(value)) { movementStatus.textContent = value === "MOVE_NORMAL" ? "NORMAL" : value; movementMessage.textContent = value.includes("NORMAL") || value === "LOW" ? "No confirmed suspicious movement" : "Latest movement state reported by controller"; movementCard.classList.remove("movement-danger"); }
   else { movementStatus.textContent = "UNKNOWN"; movementMessage.textContent = "Waiting for sensor state"; movementCard.classList.remove("movement-danger"); }
+}
+function updateContents(ir, alarm, events) {
+  const value = String(ir ?? "").toUpperCase();
+  // A latched incident produces exactly one TAMPER_* event, so the latest one is its cause.
+  const latestTamper = (events || []).find(event => String(event.type || "").toUpperCase().startsWith("TAMPER"));
+  const cause = isAlarmOn(alarm) && latestTamper ? String(latestTamper.type).toUpperCase() : "";
+  let status, message, icon, tone;
+  if (cause === "TAMPER_OBJECT_REMOVED") {
+    status = "REMOVED WHILE LOCKED"; message = "Item was taken out while the locker was secured"; icon = "!"; tone = "red";
+  } else if (cause === "TAMPER_OBJECT_INSERTED") {
+    status = "CHANGED WHILE LOCKED"; message = "An item appeared while the locker was secured"; icon = "!"; tone = "red";
+  } else if (value === "PRESENT") {
+    status = "ITEM PRESENT"; message = "An item is detected inside the locker"; icon = "▣"; tone = "green";
+  } else if (value === "ABSENT") {
+    status = "EMPTY"; message = "No item detected inside the locker"; icon = "□"; tone = "muted";
+  } else {
+    status = "UNKNOWN"; message = "Waiting for IR sensor state"; icon = "?"; tone = "muted";
+  }
+  contentsStatus.textContent = status;
+  contentsMessage.textContent = message;
+  contentsIcon.textContent = icon;
+  contentsIcon.className = `card-icon ${tone}`;
+  contentsCard.classList.toggle("is-alarming", tone === "red");
 }
 function updateESP32(status) {
   const online = String(status ?? "").toUpperCase() === "ONLINE";
@@ -182,7 +217,26 @@ function maybeNotify(events) {
   try { new Notification("Smart Locker security alert", { body: event.message || type.replaceAll("_", " ") }); } catch (error) { console.warn("Browser notification could not be shown", error); }
 }
 
+function redirectToLogin() {
+  window.location.href = "/login.html";
+}
+
+async function loadCurrentUser() {
+  const response = await fetch(`${API}/me`, { cache: "no-store" });
+  if (response.status === 401) { redirectToLogin(); return false; }
+  currentUser = await response.json();
+  userName.textContent = currentUser.username;
+  userRole.textContent = currentUser.role.toUpperCase();
+  userChip.hidden = false;
+  return true;
+}
+
+logoutButton.addEventListener("click", async () => {
+  try { await fetch(`${API}/logout`, { method: "POST" }); } finally { redirectToLogin(); }
+});
+
 function applyDashboardData(data) {
+  lastDashboardData = data;
   updateESP32(data.esp32);
   updateLock(data.locked);
   updateMovement(data.movement);
@@ -190,6 +244,7 @@ function applyDashboardData(data) {
   updateSecurity(data.security, data.movement, data.alarm, data.locked);
   updateSensors(data);
   latestEvents = Array.isArray(data.activity) ? data.activity : [];
+  updateContents(data.ir, data.alarm, latestEvents);
   maybeNotify(latestEvents);
   renderActivity();
   lastUpdatedAt = new Date();
@@ -201,6 +256,7 @@ async function updateDashboard() {
   statusRequestInFlight = true;
   try {
     const response = await fetch(`${API}/status`, { cache: "no-store" });
+    if (response.status === 401) { redirectToLogin(); return; }
     if (!response.ok) throw new Error(`Status request failed (${response.status})`);
     const data = await response.json();
     applyDashboardData(data);
@@ -222,6 +278,7 @@ async function sendCommand(action, button) {
   button.disabled = true; commandFeedback.className = "feedback"; commandFeedback.textContent = `Sending ${action.toLowerCase()} command…`;
   try {
     const response = await fetch(`${API}/${action.toLowerCase()}`, { method: "POST" });
+    if (response.status === 401) { redirectToLogin(); return; }
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.success === false) throw new Error(result.message || "Command request failed");
     commandFeedback.className = "feedback success"; commandFeedback.textContent = `${action} command accepted by backend; waiting for controller status.`;
@@ -229,7 +286,11 @@ async function sendCommand(action, button) {
     await updateDashboard();
   } catch (error) {
     commandFeedback.className = "feedback error"; commandFeedback.textContent = `Could not send command: ${error.message}`;
-  } finally { button.disabled = false; }
+  } finally {
+    button.disabled = false;
+    // Re-apply role and lock-state rules to the buttons.
+    if (lastDashboardData) applyDashboardData(lastDashboardData);
+  }
 }
 
 unlockButton.addEventListener("click", () => sendCommand("UNLOCK", unlockButton));
@@ -247,6 +308,7 @@ async function clearAlarmIncident() {
   commandFeedback.textContent = "Sending alarm-clear request…";
   try {
     const response = await fetch(`${API}/clear-alarm`, { method: "POST" });
+    if (response.status === 401) { redirectToLogin(); return; }
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.success === false) throw new Error(result.message || "Clear request failed");
     commandFeedback.className = "feedback success";
@@ -294,7 +356,14 @@ if ("Notification" in window && Notification.permission === "default") {
   console.info("Browser notifications can be enabled from the browser's site settings when needed.");
 }
 
-// Initial state load, live stream, and low-frequency fallback/recovery refresh.
-updateDashboard();
-connectLiveUpdates();
-setInterval(updateDashboard, 15000);
+// Identify the user first so role rules apply, then load state, live stream,
+// and low-frequency fallback/recovery refresh.
+loadCurrentUser().then(loggedIn => {
+  if (!loggedIn) return;
+  updateDashboard();
+  connectLiveUpdates();
+  setInterval(updateDashboard, 15000);
+}).catch(error => {
+  console.error("Could not load current user:", error);
+  updateDashboard();
+});

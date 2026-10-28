@@ -684,6 +684,7 @@ bool postEvent(const EventMessage &ev) {
   if (!http.begin(httpClient, url)) return false;
   http.setTimeout(2500);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Key", DEVICE_API_KEY);
   String body = "{";
   body += "\"event_id\":" + String(ev.id) + ",";
   body += "\"type\":\"" + jsonEscape(ev.type) + "\",";
@@ -707,6 +708,7 @@ void sendHeartbeat() {
   if (!http.begin(httpClient, String(SERVER_BASE_URL) + "/api/heartbeat")) return;
   http.setTimeout(2000);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Key", DEVICE_API_KEY);
   String body = "{";
   body += "\"locked\":" + String(s.locked ? "true" : "false") + ",";
   body += "\"movement\":\"" + String(movementName(s.movement)) + "\",";
@@ -725,6 +727,7 @@ bool postClearCommandAck(const ClearAckMessage &ack) {
   if (!http.begin(httpClient, String(SERVER_BASE_URL) + "/api/command-ack")) return false;
   http.setTimeout(2500);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Key", DEVICE_API_KEY);
   String body = "{\"command_id\":" + String(ack.commandId) +
                 ",\"executed\":true,\"success\":" + String(ack.success ? "true" : "false") + "}";
   int code = http.POST(body);
@@ -761,6 +764,7 @@ void pollCommand() {
   HTTPClient http;
   if (!http.begin(httpClient, String(SERVER_BASE_URL) + "/api/command")) return;
   http.setTimeout(2000);
+  http.addHeader("X-Device-Key", DEVICE_API_KEY);
   int code = http.GET();
   if (code == HTTP_CODE_OK) {
     String payload = http.getString();
