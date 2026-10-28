@@ -1,0 +1,9 @@
+/* Add to the end of style.css if a danger button style does not already exist. */
+.button-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #b91c1c;
+}
+.button-danger:hover:not(:disabled) { background: #b91c1c; }
+#clear-alarm-btn { width: 100%; margin-top: 10px; }
+#clear-alarm-btn[hidden] { display: none !important; }

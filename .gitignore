@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 .env
+# Local secrets
+esp32/smart_locker/secrets.h
+backend/local_secrets.json
+backend/users.json

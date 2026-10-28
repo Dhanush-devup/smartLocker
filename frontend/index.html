@@ -1,234 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0,
-                   maximum-scale=1.0, user-scalable=no">
-
-    <title>Smart Locker</title>
-
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111827">
+  <title>Smart Locker | Security Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-<div class="app">
-
-    <!-- HEADER -->
-    <header class="header">
-
-        <div>
-            <h1>🔐 Smart Locker</h1>
-            <p>ESP32 Security System</p>
-        </div>
-
-        <div id="esp-status" class="connection offline">
-            ● OFFLINE
-        </div>
-
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">⌑</div>
+        <div><h1>Smart Locker</h1><p>Security management system</p></div>
+      </div>
+      <div id="esp-status" class="connection offline" aria-live="polite"><span class="status-dot"></span> Connecting…</div>
     </header>
 
-
-    <!-- SECURITY -->
-    <section id="security-card" class="card security secure">
-
-        <div class="label">
-            SECURITY STATUS
+    <main>
+      <section id="security-card" class="security-panel state-unknown" aria-live="polite">
+        <div class="security-panel-top"><span class="eyebrow">CURRENT SECURITY STATUS</span><span id="security-pill" class="state-pill">WAITING FOR DATA</span></div>
+        <div class="security-main">
+          <div id="security-icon" class="security-symbol" aria-hidden="true">◈</div>
+          <div class="security-copy"><h2 id="security-status">CONNECTING</h2><p id="security-message">Waiting for the locker controller's first status update.</p></div>
         </div>
-
-        <div id="security-icon" class="main-icon">
-            🛡️
-        </div>
-
-        <h2 id="security-status">
-            SECURE
-        </h2>
-
-        <p id="security-message">
-            Locker is secure and stable
-        </p>
-
-    </section>
-
-
-    <!-- LOCKER -->
-    <section class="card locker-card">
-
-        <div class="label">
-            LOCKER
-        </div>
-
-        <div id="lock-icon" class="main-icon">
-            🔒
-        </div>
-
-        <h2 id="lock-status">
-            LOCKED
-        </h2>
-
-        <p id="lock-message">
-            Locker is secured
-        </p>
-
-        <div class="buttons">
-
-            <button id="unlock-btn" class="unlock">
-                🔓 Unlock
-            </button>
-
-            <button id="lock-btn" class="lock">
-                🔒 Lock
-            </button>
-
-        </div>
-
-    </section>
-
-
-    <!-- MOVEMENT -->
-    <section id="movement-card" class="card">
-
-        <div class="label">
-            MOVEMENT
-        </div>
-
-        <div id="movement-icon" class="main-icon">
-            📡
-        </div>
-
-        <h2 id="movement-status">
-            LOW
-        </h2>
-
-        <p id="movement-message">
-            Locker is stable
-        </p>
-
-    </section>
-
-
-    <!-- ALARM -->
-    <section id="alarm-card" class="card">
-
-        <div class="label">
-            ALARM
-        </div>
-
-        <div id="alarm-icon" class="main-icon">
-            🔔
-        </div>
-
-        <h2 id="alarm-status">
-            OFF
-        </h2>
-
-        <p id="alarm-message">
-            No active alarm
-        </p>
-
-    </section>
-
-
-    <!-- SENSOR STATUS -->
-    <section class="card">
-
-        <div class="label">
-            SENSOR STATUS
-        </div>
-
-        <div class="sensor">
-
-            <div>
-                <span>ESP32</span>
-                <small>Controller</small>
-            </div>
-
-            <span id="sensor-esp32"
-                  class="badge offline-badge">
-                OFFLINE
-            </span>
-
-        </div>
-
-
-        <div class="sensor">
-
-            <div>
-                <span>ADXL345</span>
-                <small>Movement Sensor</small>
-            </div>
-
-            <span class="badge online-badge">
-                ACTIVE
-            </span>
-
-        </div>
-
-
-        <div class="sensor">
-
-            <div>
-                <span>Servo</span>
-                <small>Lock Mechanism</small>
-            </div>
-
-            <span class="badge online-badge">
-                ACTIVE
-            </span>
-
-        </div>
-
-
-        <div class="sensor">
-
-            <div>
-                <span>Buzzer</span>
-                <small>Alarm</small>
-            </div>
-
-            <span class="badge online-badge">
-                ACTIVE
-            </span>
-
-        </div>
-
-    </section>
-
-
-    <!-- ACTIVITY -->
-    <section class="card activity">
-
-        <div class="activity-header">
-
-            <div class="label">
-                ACTIVITY LOG
-            </div>
-
-            <span class="live">
-                ● LIVE
-            </span>
-
-        </div>
-
-        <div id="activity-log">
-
-            <div class="empty">
-                Waiting for activity...
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <footer>
-        Smart Locker • ESP32 IoT Security System
-    </footer>
-
+        <div class="security-foot"><span id="incident-status"><span class="status-dot"></span> Incident status unknown</span><span id="last-updated">Waiting for update</span></div>
+      </section>
+
+      <section class="overview-grid" aria-label="Locker overview">
+        <article class="card overview-card">
+          <div class="card-heading"><span class="card-icon blue">⌑</span><span class="eyebrow">LOCKER</span></div>
+          <h3 id="lock-status">UNKNOWN</h3><p id="lock-message">Waiting for controller status</p>
+          <div class="card-actions"><button id="unlock-btn" class="button button-primary" type="button">Unlock locker</button><button id="lock-btn" class="button button-dark" type="button">Lock locker</button></div>
+          
+<div id="clear-alarm-container" class="clear-alarm-container">
+    <p class="clear-alarm-warning">A security incident is latched.</p>
+  <button id="clear-alarm-btn" class="button button-danger" type="button">
+    Clear Alarm
+  </button>
 </div>
 
-<script src="script.js"></script>
+          <p id="command-feedback" class="feedback" role="status"></p>
+        </article>
+        <article id="alarm-card" class="card overview-card alarm-card">
+          <div class="card-heading"><span class="card-icon red">!</span><span class="eyebrow">ALARM INCIDENT</span></div>
+          <h3 id="alarm-status">UNKNOWN</h3><p id="alarm-message">Waiting for controller status</p>
+          <div class="alarm-note" id="alarm-incident-note">The incident latch is reported by the controller; buzzer output is not reported separately.</div>
+        </article>
+        <article id="movement-card" class="card overview-card">
+          <div class="card-heading"><span class="card-icon amber">↗</span><span class="eyebrow">MOVEMENT</span></div>
+          <h3 id="movement-status">UNKNOWN</h3><p id="movement-message">Waiting for sensor state</p>
+        </article>
+      </section>
 
+      <section class="lower-grid">
+        <article class="card hardware-card">
+          <div class="section-heading"><div><span class="eyebrow">SYSTEM HEALTH</span><h2>Hardware status</h2></div><span class="subtle-label">Reported information</span></div>
+          <div class="hardware-row"><div class="hardware-icon">ESP</div><div class="hardware-copy"><strong>ESP32 controller</strong><small>Heartbeat connection</small></div><span id="sensor-esp32" class="badge neutral">UNKNOWN</span></div>
+          <div class="hardware-row"><div class="hardware-icon">AX</div><div class="hardware-copy"><strong>ADXL345</strong><small>Movement sensor</small></div><span id="sensor-adxl" class="badge neutral">NOT REPORTED</span></div>
+          <div class="hardware-row"><div class="hardware-icon">IR</div><div class="hardware-copy"><strong>IR sensor</strong><small id="ir-description">Object state not reported</small></div><span id="sensor-ir" class="badge neutral">UNKNOWN</span></div>
+          <div class="hardware-row"><div class="hardware-icon">SV</div><div class="hardware-copy"><strong>Servo / buzzer</strong><small>Actuator state is not independently verified</small></div><span class="badge neutral">NOT VERIFIED</span></div>
+          <p id="sensor-fault" class="fault-message" hidden></p>
+        </article>
+
+        <article class="card activity-card">
+          <div class="section-heading"><div><span class="eyebrow">EVENT TIMELINE</span><h2>Recent activity</h2></div><span class="live-label"><span class="status-dot"></span> LIVE</span></div>
+          <div class="activity-filters" role="group" aria-label="Filter activity events">
+            <button class="filter-button active" data-filter="ALL" type="button">All</button>
+            <button class="filter-button" data-filter="SECURITY" type="button">Security</button>
+            <button class="filter-button" data-filter="ACCESS" type="button">Access</button>
+            <button class="filter-button" data-filter="HARDWARE" type="button">Hardware</button>
+          </div>
+          <div id="activity-log" class="activity-list" aria-live="polite"><div class="empty-state">Waiting for locker events…</div></div>
+          <p class="history-note">History is held in memory for this backend run. It resets when the backend restarts.</p>
+        </article>
+      </section>
+    </main>
+    <footer><span>Smart Locker</span><span>Local demonstration dashboard</span></footer>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
