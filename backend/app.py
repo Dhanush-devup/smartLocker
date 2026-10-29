@@ -6,12 +6,14 @@ from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from queue import Queue, Empty
-from threading import Lock
+from threading import Lock, Thread
 import hmac
 import json
 import os
 import secrets
 import time
+import urllib.parse
+import urllib.request
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -29,12 +31,50 @@ def load_local_secrets():
     return (
         os.environ.get("FLASK_SECRET_KEY") or stored.get("flask_secret_key") or secrets.token_hex(32),
         os.environ.get("DEVICE_API_KEY") or stored.get("device_api_key"),
+        os.environ.get("TELEGRAM_BOT_TOKEN") or stored.get("telegram_bot_token"),
+        os.environ.get("TELEGRAM_OWNER_CHAT_ID") or stored.get("telegram_owner_chat_id"),
     )
 
 
-FLASK_SECRET_KEY, DEVICE_API_KEY = load_local_secrets()
+FLASK_SECRET_KEY, DEVICE_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_CHAT_ID = load_local_secrets()
 if not DEVICE_API_KEY:
     print("WARNING: no DEVICE_API_KEY configured; ESP32 endpoints are unauthenticated.")
+if not (TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_CHAT_ID):
+    print("WARNING: Telegram not configured; owner tamper notifications are disabled.")
+
+# Event types that notify the owner on Telegram (prefix match).
+NOTIFY_OWNER_PREFIXES = ("TAMPER", "SENSOR_FAULT")
+
+
+def send_owner_telegram(text):
+    """Send in a background thread so a slow or failing Telegram never delays the ESP32."""
+    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_CHAT_ID):
+        return
+
+    def deliver():
+        body = urllib.parse.urlencode({"chat_id": TELEGRAM_OWNER_CHAT_ID, "text": text}).encode()
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        try:
+            with urllib.request.urlopen(url, data=body, timeout=8):
+                pass
+            print("Telegram: owner notified.")
+        except Exception as error:  # Never let notification problems affect the locker.
+            print(f"Telegram notification failed: {error}")
+
+    Thread(target=deliver, daemon=True).start()
+
+
+def notify_owner_of_event(event_type, data):
+    stamp = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y, %H:%M:%S IST")
+    locked = "Locked" if data.get("locked") is True else "Unlocked" if data.get("locked") is False else "Unknown"
+    item = {"PRESENT": "Item present", "ABSENT": "Item absent"}.get(str(data.get("ir", "")).upper(), "Unknown")
+    send_owner_telegram(
+        f"🚨 Smart Locker: {event_type.replace('_', ' ').title()}\n\n"
+        f"{data.get('message') or ''}\n\n"
+        f"Locker: {locked}\n"
+        f"Contents: {item}\n"
+        f"Time: {stamp}"
+    )
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR))
 app.secret_key = FLASK_SECRET_KEY
@@ -465,6 +505,7 @@ def acknowledge_command():
             event_id=f"clear-command-{command_id}",
             source="ESP32",
         )
+        send_owner_telegram(f"✅ Smart Locker: alarm cleared by {requested_by}. Locker is re-arming.")
 
     broadcast_update()
     return jsonify({
@@ -493,13 +534,21 @@ def event():
     update_state_from_payload(data)
 
     event_type = data.get("type") or data.get("event")
+    event_id = data.get("event_id")
+    # Event ids restart at 1 on every ESP32 boot; prefix the boot id so a
+    # reboot is not mistaken for duplicate events.
+    if event_id is not None and data.get("boot_id") is not None:
+        event_id = f"{data['boot_id']}:{event_id}"
     if event_type:
-        add_activity(
+        is_new = add_activity(
             event_type,
             data.get("message"),
-            data.get("event_id"),
+            event_id,
             "ESP32",
         )
+        # Only new events notify, so ESP32 retries never send duplicate messages.
+        if is_new and str(event_type).upper().startswith(NOTIFY_OWNER_PREFIXES):
+            notify_owner_of_event(str(event_type).upper(), data)
 
     broadcast_update()
     return jsonify({"success": True})
