@@ -79,8 +79,8 @@ static constexpr uint32_t ADXL_DIAGNOSTIC_INTERVAL_MS = 250;
 static constexpr uint8_t BASELINE_SAMPLE_COUNT = 30;
 
 // Servo angles may need adjustment for your physical latch.
-static constexpr int SERVO_LOCK_ANGLE = 0;
-static constexpr int SERVO_UNLOCK_ANGLE = 90;
+static constexpr int SERVO_LOCK_ANGLE = 90;
+static constexpr int SERVO_UNLOCK_ANGLE = 0;
 
 // ------------------------------ OBJECTS --------------------------------
 Adafruit_ADXL345_Unified accelerometer = Adafruit_ADXL345_Unified(12345);
@@ -149,6 +149,8 @@ static uint32_t lastHeartbeatAt = 0;
 static uint32_t lastIREventAt = 0;
 static uint32_t lastEventRetryAt = 0;
 static uint32_t nextEventId = 1;
+// Random per boot so the backend can tell event #1 of this run from #1 of the last run.
+static uint32_t bootId = 0;
 static float baselineMagnitude = 0.0f;
 static bool baselineReady = false;
 static uint8_t baselineCount = 0;
@@ -686,6 +688,7 @@ bool postEvent(const EventMessage &ev) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_API_KEY);
   String body = "{";
+  body += "\"boot_id\":" + String(bootId) + ",";
   body += "\"event_id\":" + String(ev.id) + ",";
   body += "\"type\":\"" + jsonEscape(ev.type) + "\",";
   body += "\"message\":\"" + jsonEscape(ev.message) + "\",";
@@ -899,6 +902,10 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // esp_random() is truly random once the Wi-Fi radio is on.
+  bootId = esp_random();
+  if (bootId == 0) bootId = 1;
+  Serial.printf("[SYSTEM] Boot id = %lu\n", (unsigned long)bootId);
   Serial.printf("[WiFi] Connecting to '%s'", WIFI_SSID);
   uint32_t connectStart = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - connectStart < 12000) {
