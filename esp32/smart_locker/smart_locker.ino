@@ -38,6 +38,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 #include <ESP32Servo.h>
+#include <Preferences.h>
 #include <math.h>
 
 
@@ -85,6 +86,8 @@ static constexpr int SERVO_UNLOCK_ANGLE = 0;
 // ------------------------------ OBJECTS --------------------------------
 Adafruit_ADXL345_Unified accelerometer = Adafruit_ADXL345_Unified(12345);
 Servo lockServo;
+// Flash (NVS) storage so a latched alarm survives a reboot or power loss.
+Preferences latchStore;
 WiFiClient httpClient;
 
 // ------------------------------- STATES --------------------------------
@@ -284,6 +287,7 @@ void triggerTamperAlarm(const char* reason, const char* eventType = "TAMPER_ALAR
     xSemaphoreGive(stateMutex);
   }
   if (!wasLatched) {
+    latchStore.putBool("latched", true);  // Save first, so unplugging right away can't erase it.
     startBuzzer();
     queueEvent(eventType, reason, true, true);
   } else {
@@ -302,6 +306,7 @@ void clearLatchedAlarmLocal() {
     state.security = isLocked ? SEC_REARMING : SEC_AUTHORIZED_ACCESS;
     xSemaphoreGive(stateMutex);
   }
+  latchStore.putBool("latched", false);
 
   // IMPORTANT: entering SEC_REARMING must also enable the re-arm state machine.
   // Without this, updateRearmState() returns immediately forever and movement
@@ -896,9 +901,20 @@ void setup() {
 
   lockServo.setPeriodHertz(50);
   lockServo.attach(SERVO_PIN, 500, 2400);
-  lockServo.write(SERVO_LOCK_ANGLE); 
+  lockServo.write(SERVO_LOCK_ANGLE);
   state.security = SEC_REARMING;
   rearmPending = true;
+
+  // Restore an alarm that was latched before a reboot or power loss.
+  // Re-arming stays pending until the alarm is explicitly cleared.
+  latchStore.begin("locker", false);
+  if (latchStore.getBool("latched", false)) {
+    state.incidentLatched = true;
+    state.security = SEC_ALARM_LATCHED;
+    startBuzzer();
+    queueEvent("TAMPER_ALARM_RESTORED", "Alarm was active before a reboot or power loss; latch restored", false, true);
+    Serial.println("[ALARM] Latched alarm restored from flash after reboot.");
+  }
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
